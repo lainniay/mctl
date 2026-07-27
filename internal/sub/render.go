@@ -19,6 +19,7 @@ type providerProxy struct {
 	Network        string `yaml:"network,omitempty"`
 	TLS            bool   `yaml:"tls,omitempty"`
 	SkipCertVerify bool   `yaml:"skip-cert-verify,omitempty"`
+	UDP            bool   `yaml:"udp"`
 }
 
 func RenderProvider(proxies []Proxy) ([]byte, error) {
@@ -39,6 +40,7 @@ func toProviderProxy(proxy Proxy) providerProxy {
 		UUID:           proxy.UUID,
 		Network:        proxy.Network,
 		SkipCertVerify: proxy.SkipCertVerify,
+		UDP:            true,
 	}
 	if proxy.Type == "anytls" {
 		out.SNI = proxy.SNI

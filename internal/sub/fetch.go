@@ -1,9 +1,11 @@
 package sub
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	neturl "net/url"
 	"time"
 )
 
@@ -11,10 +13,14 @@ var httpClient = &http.Client{
 	Timeout: 30 * time.Second,
 }
 
-func Fetch(url string) (string, error) {
-	resp, err := httpClient.Get(url)
+func Fetch(address string) (string, error) {
+	resp, err := httpClient.Get(address)
 	if err != nil {
-		return "", err
+		var urlErr *neturl.Error
+		if errors.As(err, &urlErr) {
+			return "", fmt.Errorf("subscription request failed: %v", urlErr.Err)
+		}
+		return "", errors.New("subscription request failed")
 	}
 	defer func() {
 		_ = resp.Body.Close()

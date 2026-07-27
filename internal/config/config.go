@@ -6,19 +6,28 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
-	"slices"
 )
 
-var ErrSubExists = errors.New("subscription already exists")
+type Group struct {
+	Name       string `json:"name"`
+	Type       string `json:"type"`
+	Selectable bool   `json:"selectable"`
+	Filter     string `json:"filter,omitempty"`
+	URL        string `json:"url,omitempty"`
+	Interval   int    `json:"interval,omitempty"`
+}
 
-type Sub struct {
-	Name    string `json:"name"`
-	URL     string `json:"url"`
-	Enabled bool   `json:"enabled"`
+type Rule struct {
+	Match   string   `json:"match"`
+	Policy  string   `json:"policy"`
+	Options []string `json:"options,omitempty"`
 }
 
 type Config struct {
-	Subs []Sub `json:"subs"`
+	Version      int     `json:"version,omitempty"`
+	DefaultGroup string  `json:"default_group,omitempty"`
+	Groups       []Group `json:"groups,omitempty"`
+	Rules        []Rule  `json:"rules,omitempty"`
 }
 
 func getXdgConfig() (string, error) {
@@ -33,12 +42,20 @@ func getXdgConfig() (string, error) {
 	return base, nil
 }
 
-func Load() (Config, error) {
+func Dir() (string, error) {
 	base, err := getXdgConfig()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(base, "mihomo"), nil
+}
+
+func Load() (Config, error) {
+	dir, err := Dir()
 	if err != nil {
 		return Config{}, err
 	}
-	configPath := filepath.Join(base, "mihomo", "mctl.json")
+	configPath := filepath.Join(dir, "mctl.json")
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -54,11 +71,10 @@ func Load() (Config, error) {
 }
 
 func (c Config) Save() error {
-	base, err := getXdgConfig()
+	configDir, err := Dir()
 	if err != nil {
 		return err
 	}
-	configDir := filepath.Join(base, "mihomo")
 	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		return err
 	}
@@ -67,38 +83,5 @@ func (c Config) Save() error {
 		return err
 	}
 	configPath := filepath.Join(configDir, "mctl.json")
-	if err := os.WriteFile(configPath, data, 0o644); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (c *Config) AddSub(name, url string) error {
-	for _, sub := range c.Subs {
-		if sub.Name == name || sub.URL == url {
-			return ErrSubExists
-		}
-	}
-	c.Subs = append(c.Subs, Sub{Name: name, URL: url, Enabled: true})
-	return nil
-}
-
-func (c *Config) RemoveSub(nameOrURL string) bool {
-	for i, sub := range c.Subs {
-		if sub.Name == nameOrURL || sub.URL == nameOrURL {
-			c.Subs = slices.Delete(c.Subs, i, i+1)
-			return true
-		}
-	}
-	return false
-}
-
-func (c *Config) SetSubEnabled(nameOrURL string, enabled bool) bool {
-	for i, sub := range c.Subs {
-		if sub.Name == nameOrURL || sub.URL == nameOrURL {
-			c.Subs[i].Enabled = enabled
-			return true
-		}
-	}
-	return false
+	return writeFileAtomic(configPath, data, 0o600)
 }

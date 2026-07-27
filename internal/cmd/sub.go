@@ -17,37 +17,42 @@ var subCmd = &cobra.Command{
 }
 
 var subAddCmd = &cobra.Command{
-	Use:   "add <name> <url>",
-	Short: "Add subscription link",
-	Args:  cobra.ExactArgs(2),
+	Use:     "add <name>",
+	Short:   "Add subscription link",
+	Example: `  MCTL_SUB_URL="$(pbpaste)" mctl sub add primary`,
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load()
+		url := os.Getenv("MCTL_SUB_URL")
+		if url == "" {
+			return fmt.Errorf("MCTL_SUB_URL is required")
+		}
+		subs, err := config.LoadSubs()
 		if err != nil {
 			return err
 		}
-		if err := cfg.AddSub(args[0], args[1]); err != nil {
+		if err := subs.AddSub(args[0], url); err != nil {
 			if errors.Is(err, config.ErrSubExists) {
 				return fmt.Errorf("subscription already exists: %s", args[0])
 			}
 			return err
 		}
-		return cfg.Save()
+		return subs.Save()
 	},
 }
 
 var subRemoveCmd = &cobra.Command{
-	Use:   "remove <name-or-url>",
+	Use:   "remove <name>",
 	Short: "Remove subscription link",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load()
+		subs, err := config.LoadSubs()
 		if err != nil {
 			return err
 		}
-		if !cfg.RemoveSub(args[0]) {
+		if !subs.RemoveSub(args[0]) {
 			return fmt.Errorf("subscription not found: %s", args[0])
 		}
-		return cfg.Save()
+		return subs.Save()
 	},
 }
 
@@ -56,12 +61,12 @@ var subListCmd = &cobra.Command{
 	Short: "List all subscription links",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := config.Load()
+		subs, err := config.LoadSubs()
 		if err != nil {
 			return err
 		}
-		for _, sub := range cfg.Subs {
-			if _, err := fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\t%t\n", sub.Name, sub.URL, sub.Enabled); err != nil {
+		for _, sub := range subs.Items {
+			if _, err := fmt.Fprintf(cmd.OutOrStdout(), "%s\t%t\n", sub.Name, sub.Enabled); err != nil {
 				return err
 			}
 		}
@@ -84,13 +89,13 @@ var subUpdateCmd = &cobra.Command{
 }
 
 func runSubUpdate() (int, string, error) {
-	cfg, err := config.Load()
+	subs, err := config.LoadSubs()
 	if err != nil {
 		return 0, "", err
 	}
 
 	var proxies []sub.Proxy
-	for _, source := range cfg.Subs {
+	for _, source := range subs.Items {
 		if !source.Enabled {
 			continue
 		}
@@ -118,26 +123,22 @@ func runSubUpdate() (int, string, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return 0, "", err
 	}
-	if err := os.WriteFile(path, provider, 0o644); err != nil {
+	if err := writeAtomic(path, provider, 0o644, 0o755); err != nil {
 		return 0, "", err
 	}
 	return len(proxies), path, nil
 }
 
 func providerPath() (string, error) {
-	base := os.Getenv("XDG_CONFIG_HOME")
-	if base == "" || !filepath.IsAbs(base) {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			return "", err
-		}
-		base = filepath.Join(home, ".config")
+	dir, err := config.Dir()
+	if err != nil {
+		return "", err
 	}
-	return filepath.Join(base, "mihomo", "providers", "nodes.yaml"), nil
+	return filepath.Join(dir, "providers", "nodes.yaml"), nil
 }
 
 var subEnableCmd = &cobra.Command{
-	Use:   "enable <name-or-url>",
+	Use:   "enable <name>",
 	Short: "Enable subscription",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -146,7 +147,7 @@ var subEnableCmd = &cobra.Command{
 }
 
 var subDisableCmd = &cobra.Command{
-	Use:   "disable <name-or-url>",
+	Use:   "disable <name>",
 	Short: "Disable subscription",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -154,15 +155,15 @@ var subDisableCmd = &cobra.Command{
 	},
 }
 
-func setSubEnabled(nameOrURL string, enabled bool) error {
-	cfg, err := config.Load()
+func setSubEnabled(name string, enabled bool) error {
+	subs, err := config.LoadSubs()
 	if err != nil {
 		return err
 	}
-	if !cfg.SetSubEnabled(nameOrURL, enabled) {
-		return fmt.Errorf("subscription not found: %s", nameOrURL)
+	if !subs.SetSubEnabled(name, enabled) {
+		return fmt.Errorf("subscription not found: %s", name)
 	}
-	return cfg.Save()
+	return subs.Save()
 }
 
 func init() {

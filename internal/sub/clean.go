@@ -54,12 +54,22 @@ type MapRule struct {
 }
 
 var regionRules = []MapRule{
-	{Key: "Hong Kong", Values: []string{"🇭🇰", "HK", "hk", "香港", "Hong Kong", "HongKong", "hongkong"}},
+	{Key: "HongKong", Values: []string{"🇭🇰", "HK", "hk", "香港", "Hong Kong", "HongKong", "hongkong"}},
 	{Key: "Japan", Values: []string{"🇯🇵", "JP", "jp", "日本", "Japan", "japan"}},
 	{Key: "Taiwan", Values: []string{"🇹🇼", "TW", "tw", "台湾", "Taiwan", "taiwan"}},
 	{Key: "Singapore", Values: []string{"🇸🇬", "SG", "sg", "新加坡", "Singapore", "singapore"}},
-	{Key: "United States", Values: []string{"🇺🇸", "US", "us", "美国", "United States", "America"}},
+	{Key: "UnitedStates", Values: []string{"🇺🇸", "US", "us", "美国", "United States", "America"}},
 	{Key: "Cloudfare", Values: []string{"CF", "Cloudfare"}},
+	{Key: "SouthAfrica", Values: []string{"🇿🇦", "ZA", "za", "南非", "South Africa"}},
+	{Key: "India", Values: []string{"🇮🇳", "IN", "in", "印度", "India"}},
+	{Key: "Turkey", Values: []string{"🇹🇷", "TR", "tr", "土耳其", "Turkey"}},
+	{Key: "Egypt", Values: []string{"🇪🇬", "EG", "eg", "埃及", "Egypt"}},
+	{Key: "Mexico", Values: []string{"🇲🇽", "MX", "mx", "墨西哥", "Mexico"}},
+	{Key: "Nigeria", Values: []string{"🇳🇬", "NG", "ng", "尼日利亚", "Nigeria"}},
+	{Key: "Brazil", Values: []string{"🇧🇷", "BR", "br", "巴西", "Brazil"}},
+	{Key: "Vietnam", Values: []string{"🇻🇳", "VN", "vn", "越南", "Vietnam"}},
+	{Key: "Argentina", Values: []string{"🇦🇷", "AR", "ar", "阿根廷", "Argentina"}},
+	{Key: "UnitedArabEmirates", Values: []string{"🇦🇪", "AE", "ae", "阿联酋", "United Arab Emirates", "UAE"}},
 }
 
 var tierRules = []MapRule{
@@ -86,9 +96,9 @@ func formatName(proxies []Proxy) []Proxy {
 			continue
 		}
 		counts[region]++
-		name := fmt.Sprintf("%s %02d", region, counts[region])
+		name := fmt.Sprintf("%s-%02d", region, counts[region])
 		if tier := detectKey(out[idx].Name, tierRules); tier != "" {
-			name += " " + tier
+			name += "-" + tier
 		}
 		out[idx].Name = name
 	}
