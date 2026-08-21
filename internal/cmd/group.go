@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/fatih/color"
 	appconfig "github.com/lainniay/mctl/internal/config"
 	"github.com/lainniay/mctl/internal/mihomo"
 	"github.com/spf13/cobra"
@@ -58,21 +59,38 @@ var groupListCmd = &cobra.Command{
 		}
 
 		current := currentGroupName(cfg, state)
-		for _, group := range groups {
-			marker := " "
-			if group.Name == current {
-				marker = "*"
+		out := commandOutput(cmd)
+		if out.pretty {
+			rows := make([][]string, 0, len(groups))
+			styles := make([]*color.Color, 0, len(groups))
+			for _, group := range groups {
+				marker := ""
+				style := out.cyan
+				if group.Name == current {
+					marker = iconCurrent
+					style = out.green
+				} else if !group.Alive {
+					style = out.red
+				}
+				alive := iconFailure
+				if group.Alive {
+					alive = iconSuccess
+				}
+				rows = append(rows, []string{marker, group.Name, group.Type, group.Now, fmt.Sprint(len(group.All)), alive})
+				styles = append(styles, style)
 			}
-
+			return out.table([]string{"", "GROUP", "TYPE", "NODE", "NODES", "ALIVE"}, rows, styles)
+		}
+		for _, group := range groups {
 			if _, err := fmt.Fprintf(
-				cmd.OutOrStdout(),
-				"%s\t%s\t%s\t%s\t%d\t%t\n",
-				marker,
-				group.Name,
-				group.Type,
-				group.Now,
-				len(group.All),
-				group.Alive,
+				out.w,
+				"%s\t%s\t%s\t%s\t%s\t%s\n",
+				out.marker(group.Name == current),
+				out.name(group.Name),
+				out.detail(group.Type),
+				out.name(group.Now),
+				out.detail(len(group.All)),
+				out.status(group.Alive),
 			); err != nil {
 				return err
 			}
@@ -115,18 +133,11 @@ var groupChangeCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		runtimeGroups, err := client.Groups(cmd.Context())
+		_, exists, err := client.Group(cmd.Context(), name)
 		if err != nil {
 			return err
 		}
-
-		exist := false
-		for _, group := range runtimeGroups {
-			if group.Name == name {
-				exist = true
-			}
-		}
-		if !exist {
+		if !exists {
 			return fmt.Errorf("group %q is missing from mihomo", name)
 		}
 
@@ -139,8 +150,7 @@ var groupChangeCmd = &cobra.Command{
 			return err
 		}
 
-		_, err = fmt.Fprintf(cmd.OutOrStdout(), "current group: %s\n", name)
-		return err
+		return commandOutput(cmd).successf("current group: %s", name)
 	},
 }
 

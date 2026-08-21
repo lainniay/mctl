@@ -19,16 +19,34 @@ type Proxy struct {
 	SkipCertVerify bool
 }
 
+type proxyIdentity struct {
+	Type           string
+	Server         string
+	Port           int
+	UUID           string
+	Password       string
+	SNI            string
+	Network        string
+	Security       string
+	SkipCertVerify bool
+}
+
+func (p Proxy) identity() proxyIdentity {
+	return proxyIdentity{
+		Type:           p.Type,
+		Server:         p.Server,
+		Port:           p.Port,
+		UUID:           p.UUID,
+		Password:       p.Password,
+		SNI:            p.SNI,
+		Network:        p.Network,
+		Security:       p.Security,
+		SkipCertVerify: p.SkipCertVerify,
+	}
+}
+
 func (p Proxy) Equal(other Proxy) bool {
-	return p.Type == other.Type &&
-		p.Server == other.Server &&
-		p.Port == other.Port &&
-		p.UUID == other.UUID &&
-		p.Password == other.Password &&
-		p.SNI == other.SNI &&
-		p.Network == other.Network &&
-		p.Security == other.Security &&
-		p.SkipCertVerify == other.SkipCertVerify
+	return p.identity() == other.identity()
 }
 
 func ParseURL(raw string) (Proxy, error) {

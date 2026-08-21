@@ -50,6 +50,14 @@ func Dir() (string, error) {
 	return filepath.Join(base, "mihomo"), nil
 }
 
+func BasePath() (string, error) {
+	dir, err := Dir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "base.yaml"), nil
+}
+
 func Load() (Config, error) {
 	dir, err := Dir()
 	if err != nil {

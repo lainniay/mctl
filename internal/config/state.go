@@ -23,12 +23,20 @@ func getXdgState() (string, error) {
 	return base, nil
 }
 
-func statePath(name string) (string, error) {
+func StateDir() (string, error) {
 	base, err := getXdgState()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(base, "mihomo", name), nil
+	return filepath.Join(base, "mihomo"), nil
+}
+
+func statePath(name string) (string, error) {
+	dir, err := StateDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, name), nil
 }
 
 func ensureStateDir(path string) error {
@@ -37,10 +45,6 @@ func ensureStateDir(path string) error {
 		return err
 	}
 	return os.Chmod(dir, 0o700)
-}
-
-func BasePath() (string, error) {
-	return statePath("base.yaml")
 }
 
 func BackupPath() (string, error) {

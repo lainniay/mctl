@@ -15,8 +15,8 @@ import (
 func TestNodeUseRejectsAutomaticGroup(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
-		case "/group":
-			_, _ = fmt.Fprint(w, `{"proxies":[{"name":"AutoTest","type":"URLTest","now":"Japan 01","all":["Japan 01","Japan 02"],"alive":true}]}`)
+		case "/proxies/AutoTest":
+			_, _ = fmt.Fprint(w, `{"name":"AutoTest","type":"URLTest","now":"Japan 01","all":["Japan 01","Japan 02"],"alive":true}`)
 		case "/proxies/Japan 02/delay":
 			_, _ = fmt.Fprint(w, `{"delay":83}`)
 		default:
@@ -69,8 +69,8 @@ func TestNodeUseSelectsMemberOfSelector(t *testing.T) {
 	selected := ""
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
-		case r.Method == http.MethodGet && r.URL.Path == "/group":
-			_, _ = fmt.Fprint(w, `{"proxies":[{"name":"NodeSelection","type":"Selector","now":"Japan 01","all":["Japan 01","Japan 02"],"alive":true}]}`)
+		case r.Method == http.MethodGet && r.URL.Path == "/proxies/NodeSelection":
+			_, _ = fmt.Fprint(w, `{"name":"NodeSelection","type":"Selector","now":"Japan 01","all":["Japan 01","Japan 02"],"alive":true}`)
 		case r.Method == http.MethodPut && r.URL.Path == "/proxies/NodeSelection":
 			selected = "Japan 02"
 			w.WriteHeader(http.StatusNoContent)

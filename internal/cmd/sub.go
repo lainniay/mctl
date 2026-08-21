@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/fatih/color"
 	"github.com/lainniay/mctl/internal/config"
 	"github.com/lainniay/mctl/internal/sub"
 	"github.com/spf13/cobra"
@@ -65,8 +66,24 @@ var subListCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		out := commandOutput(cmd)
+		if out.pretty {
+			rows := make([][]string, 0, len(subs.Items))
+			styles := make([]*color.Color, 0, len(subs.Items))
+			for _, sub := range subs.Items {
+				status := iconFailure
+				style := out.red
+				if sub.Enabled {
+					status = iconSuccess
+					style = out.green
+				}
+				rows = append(rows, []string{sub.Name, status})
+				styles = append(styles, style)
+			}
+			return out.table([]string{"NAME", "STATUS"}, rows, styles)
+		}
 		for _, sub := range subs.Items {
-			if _, err := fmt.Fprintf(cmd.OutOrStdout(), "%s\t%t\n", sub.Name, sub.Enabled); err != nil {
+			if _, err := fmt.Fprintf(out.w, "%s\t%s\n", out.name(sub.Name), out.status(sub.Enabled)); err != nil {
 				return err
 			}
 		}
@@ -83,8 +100,7 @@ var subUpdateCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = fmt.Fprintf(cmd.OutOrStdout(), "wrote %d proxies to %s\n", count, path)
-		return err
+		return commandOutput(cmd).successf("wrote %d proxies to %s", count, path)
 	},
 }
 
@@ -130,7 +146,7 @@ func runSubUpdate() (int, string, error) {
 }
 
 func providerPath() (string, error) {
-	dir, err := config.Dir()
+	dir, err := config.StateDir()
 	if err != nil {
 		return "", err
 	}

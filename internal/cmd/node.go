@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fatih/color"
 	appconfig "github.com/lainniay/mctl/internal/config"
 	"github.com/lainniay/mctl/internal/mihomo"
 	"github.com/spf13/cobra"
@@ -41,13 +42,24 @@ var nodeListCmd = &cobra.Command{
 			return err
 		}
 
-		for _, node := range group.All {
-			marker := " "
-			if node == group.Now {
-				marker = "*"
+		out := commandOutput(cmd)
+		if out.pretty {
+			rows := make([][]string, 0, len(group.All))
+			styles := make([]*color.Color, 0, len(group.All))
+			for _, node := range group.All {
+				marker := ""
+				style := out.cyan
+				if node == group.Now {
+					marker = iconCurrent
+					style = out.green
+				}
+				rows = append(rows, []string{marker, node})
+				styles = append(styles, style)
 			}
-
-			if _, err := fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\n", marker, node); err != nil {
+			return out.table([]string{"", "NODE"}, rows, styles)
+		}
+		for _, node := range group.All {
+			if _, err := fmt.Fprintf(out.w, "%s\t%s\n", out.marker(node == group.Now), out.name(node)); err != nil {
 				return err
 			}
 		}
@@ -65,7 +77,8 @@ var nodeCurrentCmd = &cobra.Command{
 			return err
 		}
 
-		_, err = fmt.Fprintf(cmd.OutOrStdout(), "%s\t%s\t%s\n", group.Name, group.Type, group.Now)
+		out := commandOutput(cmd)
+		_, err = fmt.Fprintf(out.w, "%s\t%s\t%s\n", out.name(group.Name), out.detail(group.Type), out.name(group.Now))
 		return err
 	},
 }
@@ -93,8 +106,7 @@ var nodeUseCmd = &cobra.Command{
 			return err
 		}
 
-		_, err = fmt.Fprintf(cmd.OutOrStdout(), "current node: %s\n", args[0])
-		return err
+		return commandOutput(cmd).successf("current node: %s", args[0])
 	},
 }
 
@@ -122,7 +134,8 @@ var nodeTestCmd = &cobra.Command{
 			return err
 		}
 
-		_, err = fmt.Fprintf(cmd.OutOrStdout(), "%s\t%dms\n", args[0], delay)
+		out := commandOutput(cmd)
+		_, err = fmt.Fprintf(out.w, "%s\t%s\n", out.name(args[0]), out.detail(fmt.Sprintf("%dms", delay)))
 		return err
 	},
 }
@@ -149,18 +162,14 @@ func currentRuntimeGroup(ctx context.Context) (*mihomo.Client, mihomo.Group, err
 	if err != nil {
 		return nil, mihomo.Group{}, err
 	}
-	groups, err := client.Groups(ctx)
+	group, exists, err := client.Group(ctx, name)
 	if err != nil {
 		return nil, mihomo.Group{}, err
 	}
-
-	for _, group := range groups {
-		if group.Name == name {
-			return client, group, nil
-		}
+	if !exists {
+		return nil, mihomo.Group{}, fmt.Errorf("current group %q is missing from mihomo", name)
 	}
-
-	return nil, mihomo.Group{}, fmt.Errorf("current group %q is missing from mihomo", name)
+	return client, group, nil
 }
 
 func completeSelectorNodes(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {

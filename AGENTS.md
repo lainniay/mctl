@@ -4,7 +4,7 @@
 
 - Go CLI module: `github.com/lainniay/mctl`, entrypoint `cmd/mctl/main.go`.
 - Cobra command wiring lives in `internal/cmd`; keep CLI parsing there.
-- App-owned state lives in `internal/config` and writes JSON to `$XDG_CONFIG_HOME/mihomo/mctl.json` or `~/.config/mihomo/mctl.json`.
+- App paths live in `internal/config`: editable configuration is under `$XDG_CONFIG_HOME/mihomo`, while generated files and runtime state are under `$XDG_STATE_HOME/mihomo`.
 - Subscription fetching/parsing/cleaning/rendering lives in `internal/sub`; do not mix it into Cobra command definitions unless it is orchestration only.
 - Project decisions and current roadmap are summarized in `docs/development-log.md`; update that file when direction changes.
 
@@ -19,13 +19,14 @@
 ## Current CLI Behavior
 
 - Implemented subscription commands: `sub add`, `sub remove`, `sub list`, `sub update`, `sub enable`, `sub disable`.
-- `sub update` fetches only enabled subscriptions, parses them, cleans/dedupes nodes, and writes provider YAML to `$XDG_CONFIG_HOME/mihomo/providers/nodes.yaml` or `~/.config/mihomo/providers/nodes.yaml`.
+- `sub update` fetches only enabled subscriptions, parses them, cleans/dedupes nodes, and writes provider YAML to `$XDG_STATE_HOME/mihomo/providers/nodes.yaml` or `~/.local/state/mihomo/providers/nodes.yaml`.
 - Do not reintroduce an extra `mctl/` directory under `providers`; the intended generated provider path is `mihomo/providers/nodes.yaml`.
-- `mctl.json` is JSON on purpose; generated mihomo provider output is YAML on purpose.
+- `base.yaml` and `mctl.json` belong in the config directory; generated `config.yaml`, providers, subscriptions, and selected-group state belong in the state directory.
+- `mctl.json` is JSON on purpose; generated mihomo config and provider output are YAML on purpose.
 
 ## Tests And Fixtures
 
-- Tests that touch user config should set `XDG_CONFIG_HOME` with `t.Setenv` and use `t.TempDir`; never write to the real home config during tests.
+- Tests that touch user config or state should set the corresponding `XDG_CONFIG_HOME` and `XDG_STATE_HOME` with `t.Setenv` and use `t.TempDir`; never write to real user directories during tests.
 - `internal/cmd/sub_test.go` uses `httptest.Server` for subscription update coverage and includes a disabled bad URL to prove disabled subs are skipped.
 - Current known gap: parser edge-case tests and `internal/sub/render_test.go` are absent; add focused tests before changing parser/render behavior.
 

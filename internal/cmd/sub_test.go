@@ -50,9 +50,9 @@ func TestSubAddStoresTemporaryEnvironmentURL(t *testing.T) {
 
 func Test_runSubUpdate_writesProvider_whenEnabledSubscriptionsExist(t *testing.T) {
 	// Given
-	configHome := t.TempDir()
-	t.Setenv("XDG_CONFIG_HOME", configHome)
-	t.Setenv("XDG_STATE_HOME", t.TempDir())
+	stateHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("XDG_STATE_HOME", stateHome)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if _, err := fmt.Fprint(w, "anytls://secret@hk.example.com:443?sni=hk.example.com&insecure=1#HK%2001\n"); err != nil {
@@ -79,7 +79,7 @@ func Test_runSubUpdate_writesProvider_whenEnabledSubscriptionsExist(t *testing.T
 	if count != 1 {
 		t.Fatalf("expected 1 proxy, got %d", count)
 	}
-	wantPath := filepath.Join(configHome, "mihomo", "providers", "nodes.yaml")
+	wantPath := filepath.Join(stateHome, "mihomo", "providers", "nodes.yaml")
 	if path != wantPath {
 		t.Fatalf("expected path %q, got %q", wantPath, path)
 	}
@@ -88,7 +88,7 @@ func Test_runSubUpdate_writesProvider_whenEnabledSubscriptionsExist(t *testing.T
 		t.Fatal(err)
 	}
 	content := string(data)
-	for _, want := range []string{"proxies:", "name: Hong Kong 01", "type: anytls", "skip-cert-verify: true"} {
+	for _, want := range []string{"proxies:", "name: HongKong-01", "type: anytls", "skip-cert-verify: true"} {
 		if !strings.Contains(content, want) {
 			t.Fatalf("expected provider to contain %q, got:\n%s", want, content)
 		}

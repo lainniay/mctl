@@ -42,8 +42,7 @@ var configValidateCmd = &cobra.Command{
 		if err := runConfigValidate(ctx); err != nil {
 			return err
 		}
-		_, err := fmt.Fprintln(cmd.OutOrStdout(), "configuration is valid")
-		return err
+		return commandOutput(cmd).successf("configuration is valid")
 	},
 }
 
@@ -58,8 +57,7 @@ var configApplyCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		_, err = fmt.Fprintf(cmd.OutOrStdout(), "applied configuration to %s\n", path)
-		return err
+		return commandOutput(cmd).successf("applied configuration to %s", path)
 	},
 }
 
@@ -87,7 +85,7 @@ func renderConfig() ([]byte, string, error) {
 		return nil, "", fmt.Errorf("read base config %s: %w", basePath, err)
 	}
 
-	home, err := appconfig.Dir()
+	home, err := appconfig.StateDir()
 	if err != nil {
 		return nil, "", err
 	}
@@ -154,7 +152,7 @@ func runConfigApply(ctx context.Context) (string, error) {
 			return "", fmt.Errorf("back up active config: %w", err)
 		}
 	}
-	if err := writeAtomic(target, data, 0o600, 0o755); err != nil {
+	if err := writeAtomic(target, data, 0o600, 0o700); err != nil {
 		return "", fmt.Errorf("install config: %w", err)
 	}
 	if err := client.ReloadConfig(ctx, target); err != nil {
@@ -227,7 +225,7 @@ func rollbackConfig(ctx context.Context, client *mihomo.Client, target string, o
 		}
 		return nil
 	}
-	if err := writeAtomic(target, old, 0o600, 0o755); err != nil {
+	if err := writeAtomic(target, old, 0o600, 0o700); err != nil {
 		return fmt.Errorf("restore previous config: %w", err)
 	}
 	if err := client.ReloadConfig(ctx, target); err != nil {

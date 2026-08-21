@@ -22,6 +22,40 @@ type groupResponse struct {
 	Proxies []Group `json:"proxies"`
 }
 
+func (c *Client) Group(ctx context.Context, name string) (Group, bool, error) {
+	endpoint := proxyEndpoint(c.addr, name)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint.String(), nil)
+	if err != nil {
+		return Group{}, false, err
+	}
+	c.authorize(req)
+
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return Group{}, false, fmt.Errorf("get group: %w", err)
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode == http.StatusNotFound {
+		return Group{}, false, nil
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return Group{}, false, responseError("get group", resp)
+	}
+
+	var group Group
+	if err := json.NewDecoder(resp.Body).Decode(&group); err != nil {
+		return Group{}, false, fmt.Errorf("decode group: %w", err)
+	}
+	// Plain proxies do not have the group-only "all" field.
+	if group.All == nil {
+		return Group{}, false, nil
+	}
+	return group, true, nil
+}
+
 func (c *Client) Groups(ctx context.Context) ([]Group, error) {
 	endpoint := *c.addr
 	endpoint.Path = "/group"

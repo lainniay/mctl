@@ -13,8 +13,10 @@ import (
 )
 
 func TestRenderConfig_usesXdgConfigAndState(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
-	t.Setenv("XDG_STATE_HOME", t.TempDir())
+	configHome := t.TempDir()
+	stateHome := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", configHome)
+	t.Setenv("XDG_STATE_HOME", stateHome)
 	t.Setenv("MIHOMO_URL", "127.0.0.1:9090")
 	t.Setenv("MIHOMO_SECRET", "test-secret")
 	cfg := appconfig.Config{
@@ -44,8 +46,11 @@ func TestRenderConfig_usesXdgConfigAndState(t *testing.T) {
 	if !strings.Contains(string(data), "MctlNodes:") {
 		t.Fatalf("renderConfig() output:\n%s", data)
 	}
-	if !strings.HasSuffix(home, "/mihomo") {
-		t.Fatalf("renderConfig() home = %q", home)
+	if want := filepath.Join(stateHome, "mihomo"); home != want {
+		t.Fatalf("renderConfig() home = %q, want %q", home, want)
+	}
+	if want := filepath.Join(configHome, "mihomo", "base.yaml"); basePath != want {
+		t.Fatalf("BasePath() = %q, want %q", basePath, want)
 	}
 }
 
@@ -143,7 +148,7 @@ func setupConfigApply(t *testing.T, status int) (target, backup, old string, req
 	if err := os.WriteFile(basePath, []byte("mode: rule\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	dir, err := appconfig.Dir()
+	dir, err := appconfig.StateDir()
 	if err != nil {
 		t.Fatal(err)
 	}

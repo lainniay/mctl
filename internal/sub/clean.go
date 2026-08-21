@@ -39,10 +39,14 @@ func filterAD(proxies []Proxy) []Proxy {
 
 func dedupeNode(proxies []Proxy) []Proxy {
 	out := proxies[:0]
+	seen := make(map[proxyIdentity]struct{}, len(proxies))
 	for _, proxy := range proxies {
-		if slices.ContainsFunc(out, proxy.Equal) {
+		identity := proxy.identity()
+		if _, exists := seen[identity]; exists {
 			continue
 		}
+		// struct{}{} is empty struct{}, zero memory usage
+		seen[identity] = struct{}{}
 		out = append(out, proxy)
 	}
 	return out
