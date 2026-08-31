@@ -15,8 +15,22 @@ import (
 
 const defaultDelayURL = "https://www.gstatic.com/generate_204"
 
+type delayTestPreset struct {
+	Name        string
+	URL         string
+	Description string
+}
+
+var delayTestPresets = []delayTestPreset{
+	{Name: "chatgpt", URL: "https://chatgpt.com/cdn-cgi/trace", Description: "ChatGPT connectivity"},
+	{Name: "youtube", URL: "https://www.youtube.com/generate_204", Description: "YouTube connectivity"},
+	{Name: "google", URL: defaultDelayURL, Description: "Google connectivity"},
+	{Name: "github", URL: "https://github.com", Description: "GitHub connectivity"},
+}
+
 var (
 	nodeTestURL     string
+	nodeTestPreset  string
 	nodeTestTimeout time.Duration
 )
 
@@ -24,7 +38,12 @@ func init() {
 	rootCommand.AddCommand(nodeCmd)
 	nodeCmd.AddCommand(nodeListCmd, nodeCurrentCmd, nodeUseCmd, nodeTestCmd)
 	nodeTestCmd.Flags().StringVar(&nodeTestURL, "url", defaultDelayURL, "URL used for delay testing")
+	nodeTestCmd.Flags().StringVar(&nodeTestPreset, "preset", "", "connectivity test preset (chatgpt, youtube, google, github)")
 	nodeTestCmd.Flags().DurationVar(&nodeTestTimeout, "timeout", 5*time.Second, "delay test timeout")
+	nodeTestCmd.MarkFlagsMutuallyExclusive("preset", "url")
+	if err := nodeTestCmd.RegisterFlagCompletionFunc("preset", completeDelayTestPresets); err != nil {
+		panic(err)
+	}
 }
 
 var nodeCmd = &cobra.Command{
@@ -116,8 +135,12 @@ var nodeTestCmd = &cobra.Command{
 	Args:              cobra.ExactArgs(1),
 	ValidArgsFunction: completeCurrentGroupNodes,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		if nodeTestURL == "" || nodeTestTimeout <= 0 {
-			return fmt.Errorf("test url and positive timeout are required")
+		testURL, err := resolveDelayTestURL(nodeTestPreset, nodeTestURL, cmd.Flags().Changed("url"))
+		if err != nil {
+			return err
+		}
+		if nodeTestTimeout <= 0 {
+			return fmt.Errorf("positive timeout is required")
 		}
 
 		client, group, err := currentRuntimeGroup(cmd.Context())
@@ -129,7 +152,9 @@ var nodeTestCmd = &cobra.Command{
 			return fmt.Errorf("node %q is not in group %q", args[0], group.Name)
 		}
 
-		delay, err := client.Delay(cmd.Context(), args[0], nodeTestURL, nodeTestTimeout)
+		delay, err := client.ProviderDelay(
+			cmd.Context(), mihomo.ManagedProviderName, args[0], testURL, nodeTestTimeout,
+		)
 		if err != nil {
 			return err
 		}
@@ -138,6 +163,38 @@ var nodeTestCmd = &cobra.Command{
 		_, err = fmt.Fprintf(out.w, "%s\t%s\n", out.name(args[0]), out.detail(fmt.Sprintf("%dms", delay)))
 		return err
 	},
+}
+
+func resolveDelayTestURL(preset, testURL string, customURLSet bool) (string, error) {
+	if preset == "" {
+		if testURL == "" {
+			return "", fmt.Errorf("test url is required")
+		}
+		return testURL, nil
+	}
+	if customURLSet {
+		return "", fmt.Errorf("--preset and --url cannot be used together")
+	}
+	for _, candidate := range delayTestPresets {
+		if strings.EqualFold(candidate.Name, preset) {
+			return candidate.URL, nil
+		}
+	}
+	names := make([]string, 0, len(delayTestPresets))
+	for _, candidate := range delayTestPresets {
+		names = append(names, candidate.Name)
+	}
+	return "", fmt.Errorf("unknown test preset %q (available: %s)", preset, strings.Join(names, ", "))
+}
+
+func completeDelayTestPresets(_ *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	result := make([]string, 0, len(delayTestPresets))
+	for _, preset := range delayTestPresets {
+		if strings.HasPrefix(preset.Name, strings.ToLower(toComplete)) {
+			result = append(result, preset.Name+"\t"+preset.Description)
+		}
+	}
+	return result, cobra.ShellCompDirectiveNoFileComp | cobra.ShellCompDirectiveKeepOrder
 }
 
 func currentRuntimeGroup(ctx context.Context) (*mihomo.Client, mihomo.Group, error) {

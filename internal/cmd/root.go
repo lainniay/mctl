@@ -9,8 +9,10 @@ import (
 )
 
 var rootCommand = &cobra.Command{
-	Use:   "mctl",
-	Short: "Manage mihomo subscriptions and runtime nodes",
+	Use:           "mctl",
+	Short:         "Manage mihomo subscriptions and runtime nodes",
+	SilenceErrors: true,
+	SilenceUsage:  true,
 }
 
 func Execute() {

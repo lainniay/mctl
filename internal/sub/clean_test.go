@@ -16,6 +16,8 @@ func TestDedupeNodePreservesFirstOccurrenceAndIdentityFields(t *testing.T) {
 		SNI:            "sni.example.com",
 		Network:        "tcp",
 		Security:       "tls",
+		WSPath:         "/ws",
+		WSHost:         "host.example.com",
 		SkipCertVerify: true,
 	}
 	duplicate := base
@@ -37,6 +39,8 @@ func TestDedupeNodePreservesFirstOccurrenceAndIdentityFields(t *testing.T) {
 	addVariant("sni", func(p *Proxy) { p.SNI = "other-sni.example.com" })
 	addVariant("network", func(p *Proxy) { p.Network = "ws" })
 	addVariant("security", func(p *Proxy) { p.Security = "reality" })
+	addVariant("ws-path", func(p *Proxy) { p.WSPath = "/other" })
+	addVariant("ws-host", func(p *Proxy) { p.WSHost = "other.example.com" })
 	addVariant("skip-cert-verify", func(p *Proxy) { p.SkipCertVerify = false })
 
 	want := append([]Proxy{base}, variants[1])

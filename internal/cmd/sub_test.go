@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/lainniay/mctl/internal/config"
+	"github.com/spf13/cobra"
 )
 
 func TestSubListDoesNotPrintURLs(t *testing.T) {
@@ -45,6 +46,64 @@ func TestSubAddStoresTemporaryEnvironmentURL(t *testing.T) {
 	}
 	if len(subs.Items) != 1 || subs.Items[0].Name != "primary" || subs.Items[0].URL == "" {
 		t.Fatalf("LoadSubs() = %+v", subs)
+	}
+}
+
+func TestSubNameCompletionFiltersByCommandAndPrefix(t *testing.T) {
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
+	subs := config.Subs{Items: []config.Sub{
+		{Name: "primary", URL: "https://example.com/primary", Enabled: true},
+		{Name: "backup", URL: "https://example.com/backup", Enabled: false},
+		{Name: "beta", URL: "https://example.com/beta", Enabled: false},
+	}}
+	if err := subs.Save(); err != nil {
+		t.Fatal(err)
+	}
+
+	wantDirective := cobra.ShellCompDirectiveNoFileComp | cobra.ShellCompDirectiveKeepOrder
+	tests := []struct {
+		name       string
+		cmd        *cobra.Command
+		toComplete string
+		want       []string
+	}{
+		{
+			name: "remove offers every subscription",
+			cmd:  subRemoveCmd,
+			want: []string{"primary\tenabled", "backup\tdisabled", "beta\tdisabled"},
+		},
+		{
+			name: "enable offers disabled subscriptions with matching prefix",
+			cmd:  subEnableCmd, toComplete: "b",
+			want: []string{"backup\tdisabled", "beta\tdisabled"},
+		},
+		{
+			name: "disable offers enabled subscriptions",
+			cmd:  subDisableCmd,
+			want: []string{"primary\tenabled"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, directive := tt.cmd.ValidArgsFunction(tt.cmd, nil, tt.toComplete)
+			if directive != wantDirective {
+				t.Fatalf("completion directive = %v, want %v", directive, wantDirective)
+			}
+			if fmt.Sprint(got) != fmt.Sprint(tt.want) {
+				t.Fatalf("completions = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestSubNameCompletionStopsAfterFirstArgument(t *testing.T) {
+	got, directive := subRemoveCmd.ValidArgsFunction(subRemoveCmd, []string{"primary"}, "")
+	if got != nil {
+		t.Fatalf("completions = %q, want nil", got)
+	}
+	if directive != cobra.ShellCompDirectiveNoFileComp {
+		t.Fatalf("completion directive = %v, want %v", directive, cobra.ShellCompDirectiveNoFileComp)
 	}
 }
 

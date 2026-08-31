@@ -8,18 +8,24 @@ type providerFile struct {
 }
 
 type providerProxy struct {
-	Name           string `yaml:"name"`
-	Type           string `yaml:"type"`
-	Server         string `yaml:"server"`
-	Port           int    `yaml:"port"`
-	Password       string `yaml:"password,omitempty"`
-	UUID           string `yaml:"uuid,omitempty"`
-	SNI            string `yaml:"sni,omitempty"`
-	ServerName     string `yaml:"servername,omitempty"`
-	Network        string `yaml:"network,omitempty"`
-	TLS            bool   `yaml:"tls,omitempty"`
-	SkipCertVerify bool   `yaml:"skip-cert-verify,omitempty"`
-	UDP            bool   `yaml:"udp"`
+	Name           string            `yaml:"name"`
+	Type           string            `yaml:"type"`
+	Server         string            `yaml:"server"`
+	Port           int               `yaml:"port"`
+	Password       string            `yaml:"password,omitempty"`
+	UUID           string            `yaml:"uuid,omitempty"`
+	SNI            string            `yaml:"sni,omitempty"`
+	ServerName     string            `yaml:"servername,omitempty"`
+	Network        string            `yaml:"network,omitempty"`
+	TLS            bool              `yaml:"tls,omitempty"`
+	WSOpts         *websocketOptions `yaml:"ws-opts,omitempty"`
+	SkipCertVerify bool              `yaml:"skip-cert-verify,omitempty"`
+	UDP            bool              `yaml:"udp"`
+}
+
+type websocketOptions struct {
+	Path    string            `yaml:"path,omitempty"`
+	Headers map[string]string `yaml:"headers,omitempty"`
 }
 
 func RenderProvider(proxies []Proxy) ([]byte, error) {
@@ -48,6 +54,12 @@ func toProviderProxy(proxy Proxy) providerProxy {
 	if proxy.Type == "vless" {
 		out.ServerName = proxy.SNI
 		out.TLS = proxy.Security == "tls"
+		if proxy.Network == "ws" && (proxy.WSPath != "" || proxy.WSHost != "") {
+			out.WSOpts = &websocketOptions{Path: proxy.WSPath}
+			if proxy.WSHost != "" {
+				out.WSOpts.Headers = map[string]string{"Host": proxy.WSHost}
+			}
+		}
 	}
 	return out
 }

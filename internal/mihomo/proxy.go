@@ -47,6 +47,16 @@ func (c *Client) Delay(ctx context.Context, node, testURL string, timeout time.D
 	endpoint := proxyEndpoint(c.addr, node)
 	endpoint.Path += "/delay"
 	endpoint.RawPath += "/delay"
+	return c.delay(ctx, endpoint, testURL, timeout)
+}
+
+// ProviderDelay tests one proxy from a proxy provider.
+func (c *Client) ProviderDelay(ctx context.Context, provider, node, testURL string, timeout time.Duration) (int, error) {
+	endpoint := providerProxyEndpoint(c.addr, provider, node)
+	return c.delay(ctx, endpoint, testURL, timeout)
+}
+
+func (c *Client) delay(ctx context.Context, endpoint url.URL, testURL string, timeout time.Duration) (int, error) {
 	query := endpoint.Query()
 	query.Set("url", testURL)
 	query.Set("timeout", strconv.FormatInt(timeout.Milliseconds(), 10))
@@ -84,6 +94,14 @@ func proxyEndpoint(base *url.URL, name string) url.URL {
 	endpoint := *base
 	endpoint.Path = "/proxies/" + name
 	endpoint.RawPath = "/proxies/" + url.PathEscape(name)
+	endpoint.RawQuery = ""
+	return endpoint
+}
+
+func providerProxyEndpoint(base *url.URL, provider, node string) url.URL {
+	endpoint := *base
+	endpoint.Path = "/providers/proxies/" + provider + "/" + node + "/healthcheck"
+	endpoint.RawPath = "/providers/proxies/" + url.PathEscape(provider) + "/" + url.PathEscape(node) + "/healthcheck"
 	endpoint.RawQuery = ""
 	return endpoint
 }

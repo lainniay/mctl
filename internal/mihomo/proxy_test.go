@@ -15,8 +15,8 @@ func TestClientSelectAndDelay(t *testing.T) {
 		if got := r.Header.Get("Authorization"); got != "Bearer secret" {
 			t.Errorf("Authorization = %q", got)
 		}
-		switch r.Method {
-		case http.MethodPut:
+		switch {
+		case r.Method == http.MethodPut:
 			if r.URL.EscapedPath() != "/proxies/Group%2FOne" {
 				t.Errorf("select path = %q", r.URL.EscapedPath())
 			}
@@ -27,14 +27,14 @@ func TestClientSelectAndDelay(t *testing.T) {
 				t.Errorf("select body = %+v, err = %v", body, err)
 			}
 			w.WriteHeader(http.StatusNoContent)
-		case http.MethodGet:
-			if r.URL.EscapedPath() != "/proxies/Japan%2001%20Pro/delay" {
-				t.Errorf("delay path = %q", r.URL.EscapedPath())
-			}
-			if r.URL.Query().Get("timeout") != "5000" || r.URL.Query().Get("url") != defaultTestURL {
-				t.Errorf("delay query = %v", r.URL.Query())
-			}
+		case r.URL.EscapedPath() == "/proxies/Japan%2001%20Pro/delay":
+			assertDelayQuery(t, r)
 			_, _ = fmt.Fprint(w, `{"delay":83}`)
+		case r.URL.EscapedPath() == "/providers/proxies/Mctl%2FNodes/Japan%2002%20Pro/healthcheck":
+			assertDelayQuery(t, r)
+			_, _ = fmt.Fprint(w, `{"delay":91}`)
+		default:
+			t.Errorf("unexpected request: %s %s", r.Method, r.URL.EscapedPath())
 		}
 	}))
 	defer server.Close()
@@ -52,6 +52,23 @@ func TestClientSelectAndDelay(t *testing.T) {
 	}
 	if delay != 83 {
 		t.Fatalf("Delay() = %d, want 83", delay)
+	}
+
+	delay, err = client.ProviderDelay(
+		context.Background(), "Mctl/Nodes", "Japan 02 Pro", defaultTestURL, 5*time.Second,
+	)
+	if err != nil {
+		t.Fatalf("ProviderDelay() error = %v", err)
+	}
+	if delay != 91 {
+		t.Fatalf("ProviderDelay() = %d, want 91", delay)
+	}
+}
+
+func assertDelayQuery(t *testing.T, r *http.Request) {
+	t.Helper()
+	if r.URL.Query().Get("timeout") != "5000" || r.URL.Query().Get("url") != defaultTestURL {
+		t.Errorf("delay query = %v", r.URL.Query())
 	}
 }
 

@@ -16,6 +16,8 @@ type Proxy struct {
 	SNI            string
 	Network        string
 	Security       string
+	WSPath         string
+	WSHost         string
 	SkipCertVerify bool
 }
 
@@ -28,6 +30,8 @@ type proxyIdentity struct {
 	SNI            string
 	Network        string
 	Security       string
+	WSPath         string
+	WSHost         string
 	SkipCertVerify bool
 }
 
@@ -41,6 +45,8 @@ func (p Proxy) identity() proxyIdentity {
 		SNI:            p.SNI,
 		Network:        p.Network,
 		Security:       p.Security,
+		WSPath:         p.WSPath,
+		WSHost:         p.WSHost,
 		SkipCertVerify: p.SkipCertVerify,
 	}
 }

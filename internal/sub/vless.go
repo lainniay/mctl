@@ -24,6 +24,8 @@ func parseVLESS(raw string) (Proxy, error) {
 		SNI:            query.Get("sni"),
 		Network:        query.Get("type"),
 		Security:       query.Get("security"),
+		WSPath:         query.Get("path"),
+		WSHost:         query.Get("host"),
 		SkipCertVerify: isTruthy(query.Get("insecure")),
 	}, nil
 }

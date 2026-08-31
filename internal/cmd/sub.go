@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/fatih/color"
 	"github.com/lainniay/mctl/internal/config"
@@ -18,10 +19,11 @@ var subCmd = &cobra.Command{
 }
 
 var subAddCmd = &cobra.Command{
-	Use:     "add <name>",
-	Short:   "Add subscription link",
-	Example: `  MCTL_SUB_URL="$(pbpaste)" mctl sub add primary`,
-	Args:    cobra.ExactArgs(1),
+	Use:               "add <name>",
+	Short:             "Add subscription link",
+	Example:           `  MCTL_SUB_URL="$(pbpaste)" mctl sub add primary`,
+	Args:              cobra.ExactArgs(1),
+	ValidArgsFunction: cobra.NoFileCompletions,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		url := os.Getenv("MCTL_SUB_URL")
 		if url == "" {
@@ -42,9 +44,10 @@ var subAddCmd = &cobra.Command{
 }
 
 var subRemoveCmd = &cobra.Command{
-	Use:   "remove <name>",
-	Short: "Remove subscription link",
-	Args:  cobra.ExactArgs(1),
+	Use:               "remove <name>",
+	Short:             "Remove subscription link",
+	Args:              cobra.ExactArgs(1),
+	ValidArgsFunction: completeSubscriptions,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		subs, err := config.LoadSubs()
 		if err != nil {
@@ -154,18 +157,20 @@ func providerPath() (string, error) {
 }
 
 var subEnableCmd = &cobra.Command{
-	Use:   "enable <name>",
-	Short: "Enable subscription",
-	Args:  cobra.ExactArgs(1),
+	Use:               "enable <name>",
+	Short:             "Enable subscription",
+	Args:              cobra.ExactArgs(1),
+	ValidArgsFunction: completeDisabledSubscriptions,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return setSubEnabled(args[0], true)
 	},
 }
 
 var subDisableCmd = &cobra.Command{
-	Use:   "disable <name>",
-	Short: "Disable subscription",
-	Args:  cobra.ExactArgs(1),
+	Use:               "disable <name>",
+	Short:             "Disable subscription",
+	Args:              cobra.ExactArgs(1),
+	ValidArgsFunction: completeEnabledSubscriptions,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return setSubEnabled(args[0], false)
 	},
@@ -180,6 +185,49 @@ func setSubEnabled(name string, enabled bool) error {
 		return fmt.Errorf("subscription not found: %s", name)
 	}
 	return subs.Save()
+}
+
+func completeSubscriptions(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	return completeSubscriptionsByState(args, toComplete, nil)
+}
+
+func completeDisabledSubscriptions(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	enabled := false
+	return completeSubscriptionsByState(args, toComplete, &enabled)
+}
+
+func completeEnabledSubscriptions(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	enabled := true
+	return completeSubscriptionsByState(args, toComplete, &enabled)
+}
+
+func completeSubscriptionsByState(args []string, toComplete string, enabled *bool) ([]string, cobra.ShellCompDirective) {
+	if len(args) > 0 {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	subs, err := config.LoadSubs()
+	if err != nil {
+		return nil, cobra.ShellCompDirectiveNoFileComp
+	}
+
+	result := make([]string, 0, len(subs.Items))
+	for _, subscription := range subs.Items {
+		if enabled != nil && subscription.Enabled != *enabled {
+			continue
+		}
+		if !strings.HasPrefix(subscription.Name, toComplete) {
+			continue
+		}
+		status := "disabled"
+		if subscription.Enabled {
+			status = "enabled"
+		}
+		result = append(result, subscription.Name+"\t"+status)
+	}
+	return result,
+		cobra.ShellCompDirectiveNoFileComp |
+			cobra.ShellCompDirectiveKeepOrder
 }
 
 func init() {

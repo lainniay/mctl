@@ -11,7 +11,8 @@ import (
 	"go.yaml.in/yaml/v4"
 )
 
-const providerName = "MctlNodes"
+// ManagedProviderName is the proxy provider generated and managed by mctl.
+const ManagedProviderName = "MctlNodes"
 
 type renderedConfig struct {
 	Base               map[string]any           `yaml:",inline"`
@@ -64,7 +65,7 @@ func RenderConfig(base []byte, cfg appconfig.Config, controller appconfig.Contro
 		groups = append(groups, proxyGroup{
 			Name:     group.Name,
 			Type:     group.Type,
-			Use:      []string{providerName},
+			Use:      []string{ManagedProviderName},
 			Filter:   group.Filter,
 			URL:      group.URL,
 			Interval: group.Interval,
@@ -82,7 +83,7 @@ func RenderConfig(base []byte, cfg appconfig.Config, controller appconfig.Contro
 		ExternalController: controller.Address,
 		Secret:             controller.Secret,
 		ProxyProviders: map[string]proxyProvider{
-			providerName: {
+			ManagedProviderName: {
 				Type: "file",
 				Path: "./providers/nodes.yaml",
 				HealthCheck: healthCheck{
