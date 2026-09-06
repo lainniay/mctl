@@ -6,6 +6,9 @@ import (
 	"fmt"
 	neturl "net/url"
 	"os"
+	"strings"
+
+	"github.com/lainniay/mctl/internal/sub"
 )
 
 var ErrSubExists = errors.New("subscription already exists")
@@ -63,9 +66,15 @@ func (s *Subs) AddSub(name, url string) error {
 	if name == "" {
 		return fmt.Errorf("subscription name is required")
 	}
-	parsed, err := neturl.ParseRequestURI(url)
-	if err != nil || parsed.Host == "" || parsed.Scheme != "http" && parsed.Scheme != "https" {
-		return fmt.Errorf("invalid subscription URL")
+	if strings.HasPrefix(url, "ss://") {
+		if _, err := sub.ParseURL(url); err != nil {
+			return fmt.Errorf("invalid SS node: %w", err)
+		}
+	} else {
+		parsed, err := neturl.ParseRequestURI(url)
+		if err != nil || parsed.Host == "" || parsed.Scheme != "http" && parsed.Scheme != "https" {
+			return fmt.Errorf("expected an HTTP(S) subscription URL or ss:// node URI")
+		}
 	}
 	for _, item := range s.Items {
 		if item.Name == name || item.URL == url {

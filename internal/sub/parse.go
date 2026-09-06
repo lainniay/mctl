@@ -7,6 +7,7 @@ import (
 )
 
 type Proxy struct {
+	SS             ShadowsocksOptions
 	Name           string
 	Type           string
 	Server         string
@@ -22,6 +23,7 @@ type Proxy struct {
 }
 
 type proxyIdentity struct {
+	SS             ShadowsocksOptions
 	Type           string
 	Server         string
 	Port           int
@@ -37,6 +39,7 @@ type proxyIdentity struct {
 
 func (p Proxy) identity() proxyIdentity {
 	return proxyIdentity{
+		SS:             p.SS,
 		Type:           p.Type,
 		Server:         p.Server,
 		Port:           p.Port,
@@ -56,6 +59,9 @@ func (p Proxy) Equal(other Proxy) bool {
 }
 
 func ParseURL(raw string) (Proxy, error) {
+	if strings.HasPrefix(raw, "ss://") {
+		return parseSS(raw)
+	}
 	u, err := url.Parse(raw)
 	if err != nil {
 		return Proxy{}, err

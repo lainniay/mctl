@@ -15,12 +15,12 @@ import (
 
 var subCmd = &cobra.Command{
 	Use:   "sub",
-	Short: "Manage subscription links",
+	Short: "Manage subscription links and SS nodes",
 }
 
 var subAddCmd = &cobra.Command{
 	Use:               "add <name>",
-	Short:             "Add subscription link",
+	Short:             "Add an HTTP(S) subscription or ss:// node from MCTL_SUB_URL",
 	Example:           `  MCTL_SUB_URL="$(pbpaste)" mctl sub add primary`,
 	Args:              cobra.ExactArgs(1),
 	ValidArgsFunction: cobra.NoFileCompletions,
@@ -118,9 +118,12 @@ func runSubUpdate() (int, string, error) {
 		if !source.Enabled {
 			continue
 		}
-		body, err := sub.Fetch(source.URL)
-		if err != nil {
-			return 0, "", fmt.Errorf("fetch %s: %w", source.Name, err)
+		body := source.URL
+		if !strings.HasPrefix(source.URL, "ss://") {
+			body, err = sub.Fetch(source.URL)
+			if err != nil {
+				return 0, "", fmt.Errorf("fetch %s: %w", source.Name, err)
+			}
 		}
 		items, err := sub.Parse(body)
 		if err != nil {
@@ -142,7 +145,7 @@ func runSubUpdate() (int, string, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return 0, "", err
 	}
-	if err := writeAtomic(path, provider, 0o644, 0o755); err != nil {
+	if err := writeAtomic(path, provider, 0o600, 0o700); err != nil {
 		return 0, "", err
 	}
 	return len(proxies), path, nil

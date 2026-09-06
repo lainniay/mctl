@@ -104,14 +104,51 @@ func formatName(proxies []Proxy) []Proxy {
 		if tier := detectKey(out[idx].Name, tierRules); tier != "" {
 			name += "-" + tier
 		}
+		if out[idx].Type == "ss" {
+			name += "-SS"
+		}
 		out[idx].Name = name
 	}
 	return out
+}
+
+// uniqueNames preserves the first occurrence and avoids both existing names and
+// previously generated suffixes. Connection deduplication must run before this.
+func uniqueNames(proxies []Proxy) []Proxy {
+	reserved := make(map[string]bool, len(proxies))
+	for _, p := range proxies {
+		reserved[p.Name] = true
+	}
+	used := make(map[string]bool, len(proxies))
+	next := make(map[string]int)
+	for i := range proxies {
+		base := proxies[i].Name
+		if !used[base] {
+			used[base] = true
+			continue
+		}
+		n := next[base]
+		if n < 2 {
+			n = 2
+		}
+		for {
+			name := fmt.Sprintf("%s-%d", base, n)
+			n++
+			if reserved[name] || used[name] {
+				continue
+			}
+			proxies[i].Name = name
+			used[name] = true
+			next[base] = n
+			break
+		}
+	}
+	return proxies
 }
 
 func Clean(proxies []Proxy) []Proxy {
 	proxies = filterAD(proxies)
 	proxies = dedupeNode(proxies)
 	proxies = formatName(proxies)
-	return proxies
+	return uniqueNames(proxies)
 }
