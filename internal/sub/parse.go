@@ -7,55 +7,73 @@ import (
 )
 
 type Proxy struct {
-	SS             ShadowsocksOptions
-	Name           string
-	Type           string
-	Server         string
-	Port           int
-	UUID           string
-	Password       string
-	SNI            string
-	Network        string
-	Security       string
-	WSPath         string
-	WSHost         string
-	SkipCertVerify bool
+	SS                ShadowsocksOptions
+	Name              string
+	Type              string
+	Server            string
+	Port              int
+	UUID              string
+	Password          string
+	SNI               string
+	Network           string
+	Security          string
+	ClientFingerprint string
+	WSPath            string
+	WSHost            string
+	Flow              string
+	RealityPublicKey  string
+	RealityShortID    string
+	SkipCertVerify    bool
 }
 
 type proxyIdentity struct {
-	SS             ShadowsocksOptions
-	Type           string
-	Server         string
-	Port           int
-	UUID           string
-	Password       string
-	SNI            string
-	Network        string
-	Security       string
-	WSPath         string
-	WSHost         string
-	SkipCertVerify bool
+	SS                ShadowsocksOptions
+	Type              string
+	Server            string
+	Port              int
+	UUID              string
+	Password          string
+	SNI               string
+	Network           string
+	Security          string
+	ClientFingerprint string
+	WSPath            string
+	WSHost            string
+	Flow              string
+	RealityPublicKey  string
+	RealityShortID    string
+	SkipCertVerify    bool
 }
 
 func (p Proxy) identity() proxyIdentity {
 	return proxyIdentity{
-		SS:             p.SS,
-		Type:           p.Type,
-		Server:         p.Server,
-		Port:           p.Port,
-		UUID:           p.UUID,
-		Password:       p.Password,
-		SNI:            p.SNI,
-		Network:        p.Network,
-		Security:       p.Security,
-		WSPath:         p.WSPath,
-		WSHost:         p.WSHost,
-		SkipCertVerify: p.SkipCertVerify,
+		SS:                p.SS,
+		Type:              p.Type,
+		Server:            p.Server,
+		Port:              p.Port,
+		UUID:              p.UUID,
+		Password:          p.Password,
+		SNI:               p.SNI,
+		Network:           p.Network,
+		Security:          p.Security,
+		ClientFingerprint: p.ClientFingerprint,
+		WSPath:            p.WSPath,
+		WSHost:            p.WSHost,
+		Flow:              p.Flow,
+		RealityPublicKey:  p.RealityPublicKey,
+		RealityShortID:    p.RealityShortID,
+		SkipCertVerify:    p.SkipCertVerify,
 	}
 }
 
 func (p Proxy) Equal(other Proxy) bool {
 	return p.identity() == other.identity()
+}
+
+// IsDirectNodeURI reports whether raw is a node URI that can be stored as a
+// subscription source without being fetched over HTTP.
+func IsDirectNodeURI(raw string) bool {
+	return strings.HasPrefix(raw, "ss://") || strings.HasPrefix(raw, "vless://")
 }
 
 func ParseURL(raw string) (Proxy, error) {

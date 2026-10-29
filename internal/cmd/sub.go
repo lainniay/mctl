@@ -15,12 +15,12 @@ import (
 
 var subCmd = &cobra.Command{
 	Use:   "sub",
-	Short: "Manage subscription links and SS nodes",
+	Short: "Manage subscription links and direct nodes",
 }
 
 var subAddCmd = &cobra.Command{
 	Use:               "add <name>",
-	Short:             "Add an HTTP(S) subscription or ss:// node from MCTL_SUB_URL",
+	Short:             "Add an HTTP(S) subscription or ss:// or vless:// node from MCTL_SUB_URL",
 	Example:           `  MCTL_SUB_URL="$(pbpaste)" mctl sub add primary`,
 	Args:              cobra.ExactArgs(1),
 	ValidArgsFunction: cobra.NoFileCompletions,
@@ -119,7 +119,7 @@ func runSubUpdate() (int, string, error) {
 			continue
 		}
 		body := source.URL
-		if !strings.HasPrefix(source.URL, "ss://") {
+		if !sub.IsDirectNodeURI(source.URL) {
 			body, err = sub.Fetch(source.URL)
 			if err != nil {
 				return 0, "", fmt.Errorf("fetch %s: %w", source.Name, err)

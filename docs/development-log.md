@@ -1,5 +1,11 @@
 # Development log
 
+## Direct VLESS sources and naming
+
+- `MCTL_SUB_URL=... mctl sub add <name>` now accepts `vless://` node URIs in addition to HTTP(S) subscriptions and direct `ss://` nodes. Direct VLESS sources are validated when added, persisted in `subscriptions.json`, and parsed locally by `sub update` without an HTTP fetch.
+- Region-mapped VLESS nodes retain their protocol in the generated display name, for example `JP-VLESS` becomes `Japan-01-VLESS`. Connection deduplication still uses the parsed VLESS settings rather than the display name.
+- The currently rendered VLESS transport settings cover TCP/WebSocket, TLS, SNI, WebSocket path/Host, certificate verification, the URI `fp` client fingerprint (rendered as mihomo `client-fingerprint`), REALITY (`security=reality` with required `pbk` and `sni`, optional `sid`, rendered as `reality-opts`/`tls: true`), and the `flow=xtls-rprx-vision` XTLS flow (TCP only). `flow`, `pbk` and `sid` participate in deduplication. Other VLESS transports (gRPC, HTTP/2, xhttp, …) remain outside the current support boundary.
+
 ## SS sources and Shadowsocks support
 
 - Keep the existing `MCTL_SUB_URL=... mctl sub add <name>` interface. HTTP(S) URLs remain remote subscriptions; `ss://` URIs are validated at add time and persisted as direct sources in the existing state-directory `subscriptions.json` (0600). No import command, temporary file, or separate registry is needed.

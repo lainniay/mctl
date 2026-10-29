@@ -7,18 +7,19 @@ import (
 
 func TestDedupeNodePreservesFirstOccurrenceAndIdentityFields(t *testing.T) {
 	base := Proxy{
-		Name:           "first",
-		Type:           "vless",
-		Server:         "example.com",
-		Port:           443,
-		UUID:           "uuid",
-		Password:       "password",
-		SNI:            "sni.example.com",
-		Network:        "tcp",
-		Security:       "tls",
-		WSPath:         "/ws",
-		WSHost:         "host.example.com",
-		SkipCertVerify: true,
+		Name:              "first",
+		Type:              "vless",
+		Server:            "example.com",
+		Port:              443,
+		UUID:              "uuid",
+		Password:          "password",
+		SNI:               "sni.example.com",
+		Network:           "tcp",
+		Security:          "tls",
+		ClientFingerprint: "chrome",
+		WSPath:            "/ws",
+		WSHost:            "host.example.com",
+		SkipCertVerify:    true,
 	}
 	duplicate := base
 	duplicate.Name = "duplicate"
@@ -39,6 +40,7 @@ func TestDedupeNodePreservesFirstOccurrenceAndIdentityFields(t *testing.T) {
 	addVariant("sni", func(p *Proxy) { p.SNI = "other-sni.example.com" })
 	addVariant("network", func(p *Proxy) { p.Network = "ws" })
 	addVariant("security", func(p *Proxy) { p.Security = "reality" })
+	addVariant("client-fingerprint", func(p *Proxy) { p.ClientFingerprint = "firefox" })
 	addVariant("ws-path", func(p *Proxy) { p.WSPath = "/other" })
 	addVariant("ws-host", func(p *Proxy) { p.WSHost = "other.example.com" })
 	addVariant("skip-cert-verify", func(p *Proxy) { p.SkipCertVerify = false })

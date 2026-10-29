@@ -104,8 +104,11 @@ func formatName(proxies []Proxy) []Proxy {
 		if tier := detectKey(out[idx].Name, tierRules); tier != "" {
 			name += "-" + tier
 		}
-		if out[idx].Type == "ss" {
+		switch out[idx].Type {
+		case "ss":
 			name += "-SS"
+		case "vless":
+			name += "-VLESS"
 		}
 		out[idx].Name = name
 	}

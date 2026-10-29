@@ -23,9 +23,17 @@ type providerProxy struct {
 	ServerName        string            `yaml:"servername,omitempty"`
 	Network           string            `yaml:"network,omitempty"`
 	TLS               bool              `yaml:"tls,omitempty"`
+	ClientFingerprint string            `yaml:"client-fingerprint,omitempty"`
 	WSOpts            *websocketOptions `yaml:"ws-opts,omitempty"`
+	Flow              string            `yaml:"flow,omitempty"`
+	RealityOpts       *realityOptions   `yaml:"reality-opts,omitempty"`
 	SkipCertVerify    bool              `yaml:"skip-cert-verify,omitempty"`
 	UDP               bool              `yaml:"udp"`
+}
+
+type realityOptions struct {
+	PublicKey string `yaml:"public-key"`
+	ShortID   string `yaml:"short-id,omitempty"`
 }
 
 type websocketOptions struct {
@@ -80,7 +88,12 @@ func toProviderProxy(proxy Proxy) providerProxy {
 	}
 	if proxy.Type == "vless" {
 		out.ServerName = proxy.SNI
-		out.TLS = proxy.Security == "tls"
+		out.TLS = proxy.Security == "tls" || proxy.Security == "reality"
+		out.ClientFingerprint = proxy.ClientFingerprint
+		out.Flow = proxy.Flow
+		if proxy.Security == "reality" {
+			out.RealityOpts = &realityOptions{PublicKey: proxy.RealityPublicKey, ShortID: proxy.RealityShortID}
+		}
 		if proxy.Network == "ws" && (proxy.WSPath != "" || proxy.WSHost != "") {
 			out.WSOpts = &websocketOptions{Path: proxy.WSPath}
 			if proxy.WSHost != "" {

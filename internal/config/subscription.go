@@ -6,7 +6,6 @@ import (
 	"fmt"
 	neturl "net/url"
 	"os"
-	"strings"
 
 	"github.com/lainniay/mctl/internal/sub"
 )
@@ -66,14 +65,14 @@ func (s *Subs) AddSub(name, url string) error {
 	if name == "" {
 		return fmt.Errorf("subscription name is required")
 	}
-	if strings.HasPrefix(url, "ss://") {
+	if sub.IsDirectNodeURI(url) {
 		if _, err := sub.ParseURL(url); err != nil {
-			return fmt.Errorf("invalid SS node: %w", err)
+			return fmt.Errorf("invalid node URI: %w", err)
 		}
 	} else {
 		parsed, err := neturl.ParseRequestURI(url)
 		if err != nil || parsed.Host == "" || parsed.Scheme != "http" && parsed.Scheme != "https" {
-			return fmt.Errorf("expected an HTTP(S) subscription URL or ss:// node URI")
+			return fmt.Errorf("expected an HTTP(S) subscription URL, ss:// node URI, or vless:// node URI")
 		}
 	}
 	for _, item := range s.Items {
